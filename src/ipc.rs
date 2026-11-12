@@ -1022,7 +1022,7 @@ async fn handle(data: Data, stream: &mut Connection) {
                         updated = false;
                     } else {
                         Config::set_key_confirmed(false);
-                        Config::set_id(&value);
+                        Config::set_fixed_id(&value);
                     }
                 } else if name == "temporary-password" {
                     password::update_temporary_password();
@@ -1984,7 +1984,7 @@ pub fn get_id() -> String {
             }
             if v != Config::get_id() {
                 Config::set_key_confirmed(false);
-                Config::set_id(&v);
+                Config::set_fixed_id(&v);
             }
             return v;
         }

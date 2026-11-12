@@ -189,6 +189,9 @@ const ICE_LOG_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60)
 /// A declined punch is one line a minute, carrying the number it stands for, for the same
 /// reason: the peer decides how often it asks.
 const PUNCH_LOG_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
+/// A fixed id that the server rejects is retried on every registration attempt, so report it once
+/// a minute instead of on each one.
+const FIXED_ID_MISMATCH_LOG_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 static UNKNOWN_ICE_SESSION_LOG: hbb_common::log_throttle::LogThrottle =
     hbb_common::log_throttle::LogThrottle::new(ICE_LOG_INTERVAL);
 static REJECTED_REMOTE_ICE_LOG: hbb_common::log_throttle::LogThrottle =
@@ -1322,14 +1325,21 @@ impl RendezvousMediator {
     async fn handle_uuid_mismatch(&mut self, socket: Sink<'_>) -> ResultType<()> {
         {
             let mut solving = SOLVING_PK_MISMATCH.lock().await;
-            if solving.is_empty() || *solving == self.host {
-                log::info!("UUID_MISMATCH received from {}", self.host);
-                Config::set_key_confirmed(false);
-                Config::update_id();
-                *solving = self.host.clone();
-            } else {
+            if !(solving.is_empty() || *solving == self.host) {
                 return Ok(());
             }
+            Config::set_key_confirmed(false);
+            if !Config::update_id() {
+                hbb_common::throttled_log!(
+                    FIXED_ID_MISMATCH_LOG_INTERVAL,
+                    warn,
+                    "UUID_MISMATCH from {}: the id is fixed locally, not regenerating it",
+                    self.host
+                );
+                return Ok(());
+            }
+            log::info!("UUID_MISMATCH received from {}", self.host);
+            *solving = self.host.clone();
         }
         self.register_pk(socket).await
     }

@@ -1164,7 +1164,7 @@ pub fn deploy_device(token: String, new_id: Option<String>) -> DeployResult {
                     #[cfg(any(target_os = "android", target_os = "ios"))]
                     {
                         Config::set_key_confirmed(false);
-                        Config::set_id(&new_id);
+                        Config::set_fixed_id(&new_id);
                     }
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
                     if let Err(err) = ipc::set_config("id", new_id) {
@@ -1603,7 +1603,7 @@ pub async fn change_id_shared_(id: String, old_id: String) -> &'static str {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
             Config::set_key_confirmed(false);
-            Config::set_id(&id);
+            Config::set_fixed_id(&id);
         }
     }
     err
